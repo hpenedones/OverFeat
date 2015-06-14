@@ -20,13 +20,7 @@ SET(BLAS_INCLUDE_DIR)
 SET(BLAS_INFO)
 SET(BLAS_F2C)
 
-#SET(WITH_BLAS "" CACHE STRING "Blas type [open/goto/acml/atlas/accelerate/veclib/generic]")
-# Force to use specific blas
-IF(APPLE)
-SET(WITH_BLAS "accelerate")
-ELSE(APPLE)
-SET(WITH_BLAS "open")
-ENDIF(APPLE)
+SET(WITH_BLAS "" CACHE STRING "Blas type [mkl/open/goto/acml/atlas/accelerate/veclib/generic]")
 
 # Old FindBlas
 INCLUDE(CheckCSourceRuns)
@@ -73,7 +67,7 @@ MACRO(Check_Fortran_Libraries LIBRARIES _prefix _name _flags _list)
       else ( APPLE )
         find_library(${_prefix}_${_library}_LIBRARY
           NAMES ${_library}
-          PATHS /usr/local/lib /usr/lib /usr/local/lib64 /usr/lib64 /opt/OpenBLAS/lib /usr/lib/*
+          PATHS /usr/local/lib /usr/lib /usr/local/lib64 /usr/lib64 
           ENV LD_LIBRARY_PATH )
       endif( APPLE )
       mark_as_advanced(${_prefix}_${_library}_LIBRARY)
@@ -99,6 +93,18 @@ MACRO(Check_Fortran_Libraries LIBRARIES _prefix _name _flags _list)
   endif(NOT _libraries_work)
 endmacro(Check_Fortran_Libraries)
 
+# Intel MKL?
+if((NOT BLAS_LIBRARIES)
+    AND ((NOT WITH_BLAS) OR (WITH_BLAS STREQUAL "mkl")))
+  FIND_PACKAGE(MKL)
+  IF(MKL_FOUND)
+    SET(BLAS_INFO "mkl")
+    SET(BLAS_LIBRARIES ${MKL_LIBRARIES})
+    SET(BLAS_INCLUDE_DIR ${MKL_INCLUDE_DIR})
+    SET(BLAS_VERSION ${MKL_VERSION})
+  ENDIF(MKL_FOUND)
+endif()
+
 if((NOT BLAS_LIBRARIES)
     AND ((NOT WITH_BLAS) OR (WITH_BLAS STREQUAL "open")))
   check_fortran_libraries(
@@ -106,7 +112,7 @@ if((NOT BLAS_LIBRARIES)
   BLAS
   sgemm
   ""
-  "openblas;gfortran")
+  "openblas")
   if(BLAS_LIBRARIES)
     set(BLAS_INFO "open")
   endif(BLAS_LIBRARIES)
@@ -119,7 +125,7 @@ if((NOT BLAS_LIBRARIES)
   BLAS
   sgemm
   ""
-  "openblas;gfortran;pthread")
+  "openblas;pthread")
   if(BLAS_LIBRARIES)
     set(BLAS_INFO "open")
   endif(BLAS_LIBRARIES)
